@@ -10,6 +10,16 @@ from Crypto.Hash import MD5
 from Crypto.Hash import SHA256
 from Crypto.Hash import SHA512
 
+"""
+
+TODO list
+- key length optamisation for CAST and ARC4 Ciphers
+- Create better data exeptetion handling for all Cipher decrypters
+- Create excepetion handling for bad arguments (address and protocols)
+
+"""
+
+
 def main():
 	# seting argprse
 	parser = argparse.ArgumentParser()
