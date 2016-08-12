@@ -18,47 +18,47 @@ def main():
 	parser.add_argument('-c', '--cipher', type = str, default = 'AES', help = "Cipher method for Msg encryption (defult is AES)")
 	parser.add_argument('address', type = str, help = "Target IP address [XYZ.XYZ.XYZ.XYZ:PORT]")
 	parser.add_argument('password', type = str, help = "Your password (key) to all msgs (incoming and outcoming)")
-	argumets = vars(parser.parse_args())
+	arguments = vars(parser.parse_args())
 	
 	# socket creation
 	r = socket.socket()
 	r.connect(('8.8.8.8',53))
-	hostIP, hostPort = r.getsockname()[0], argumets['port']
+	hostIP, hostPort = r.getsockname()[0], arguments['port']
 	r.close()
 	hostAddress = (hostIP, hostPort)
 	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	s.bind(hostAddress)
 	
 	# Hasher Creation
-	if argumets['hash'] == 'SHA512':
+	if arguments['hash'] == 'SHA512':
 		Hasher = SHA512.new()
-	elif argumets['hash'] == 'SHA256':
+	elif arguments['hash'] == 'SHA256':
 		Hasher = SHA256.new()
-	elif argumets['hash'] == 'MD4':
+	elif arguments['hash'] == 'MD4':
 		Hasher = MD4.new()
-	elif argumets['hash'] == 'MD5':
+	elif arguments['hash'] == 'MD5':
 		Hasher = MD5.new()
 	else:
 		print("Why not Killing me?? use ctrl+c pls")
 	
 	# KeyCreation
-	Hasher.update(argumets['password'].encode('utf-8'))
+	Hasher.update(arguments['password'].encode('utf-8'))
 	HKEY = Hasher.digest()
 	
 	# Target Setting
-	targetIP, targetPort = argumets['address'].split(':')
+	targetIP, targetPort = arguments['address'].split(':')
 	target = (targetIP, int(targetPort))
 	
 	# Creating and Starting listener thread
-	Reciver = netListener(argumets['port'], argumets['cipher'], argumets['hash'], s)
+	Reciver = netListener(arguments['port'], arguments['password'], arguments['cipher'], arguments['hash'], s)
 	Reciver.start()
 	
 	# Main msg sending loop
-	if argumets['cipher'] == 'AES':
+	if arguments['cipher'] == 'AES':
 		AESELoop(target, s, HKEY)
-	elif argumets['cipher'] == 'CAST':
+	elif arguments['cipher'] == 'CAST':
 		CASTELoop(target, s, HKEY)
-	elif argumets['cipher'] == 'ARC4':
+	elif arguments['cipher'] == 'ARC4':
 		ARC4ELoop(target, Hasher, s, HKEY)
 	else:
 		print("FATAL ERROR")
@@ -114,13 +114,14 @@ def ARC4ELoop(target, Hasher, s, key):
 	
 	### Listener Tread
 class netListener(threading.Thread):
-	def __init__(self, port, cipher, hash, socket):
+	def __init__(self, key, port, cipher, hash, socket):
 		threading.Thread.__init__(self)
 		self.port = port
 		self.isDead = False
 		self.s = socket
 		self.cipher = cipher
 		self.hash = hash
+		self.key = key
 	
 	def run(self):
 		print("starting listening port " + str(self.port))
@@ -194,7 +195,6 @@ class netListener(threading.Thread):
 	
 	def kill(self):
 		self.isDead = True
-		self.stop()
 		
 
 if __name__ == '__main__':
