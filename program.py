@@ -50,12 +50,12 @@ def main():
 	target = (targetIP, int(targetPort))
 	
 	# Creating and Starting listener thread
-	Reciver = netListener(arguments['port'], arguments['password'], arguments['cipher'], arguments['hash'], s)
+	Reciver = netListener(arguments['port'], HKEY, arguments['cipher'], arguments['hash'], s)
 	Reciver.start()
 	
 	# Main msg sending loop
 	if arguments['cipher'] == 'AES':
-		AESELoop(target, s, HKEY)
+		AESELoop(target, s, HKEY, hostAddress)
 	elif arguments['cipher'] == 'CAST':
 		CASTELoop(target, s, HKEY)
 	elif arguments['cipher'] == 'ARC4':
@@ -70,7 +70,7 @@ def main():
 	return 0
 	
 	### MAIN LOOPS
-def AESELoop(target, s, key):
+def AESELoop(target, s, key, me):
 	if len(key) < 8:
 		for i in range(3):
 			key += key
@@ -80,7 +80,11 @@ def AESELoop(target, s, key):
 		key = key[:32]
 	print("Type --kill to end transsmition")
 	message = input("---> ")
-	while message != '--kill':
+	while True:
+		if message == '--kill':
+			IV = Random.new().read(AES.block_size)
+			s.sendto(IV + AES.new(key, AES.MODE_CFB, IV).encrypt("Listener END".encode('utf-8')),me)
+			break
 		raw = message.encode('utf-8')
 		IV = Random.new().read(AES.block_size)
 		encrypter = AES.new(key, AES.MODE_CFB, IV)
@@ -114,7 +118,7 @@ def ARC4ELoop(target, Hasher, s, key):
 	
 	### Listener Tread
 class netListener(threading.Thread):
-	def __init__(self, key, port, cipher, hash, socket):
+	def __init__(self, port, key, cipher, hash, socket):
 		threading.Thread.__init__(self)
 		self.port = port
 		self.isDead = False
@@ -149,6 +153,7 @@ class netListener(threading.Thread):
 		
 			#Main Listener Loop
 		if self.cipher == 'AES':
+			self.newKey = self.key
 			self.AESDecryptLoop()
 		elif self.cipher == 'CAST':
 			self.CASTDecryptLoop()
@@ -160,15 +165,28 @@ class netListener(threading.Thread):
 	
 	
 	def AESDecryptLoop(self):
+		if len(self.newKey) < 8:
+			for i in range(3):
+				self.newKey += self.newKey
+		if len(self.newKey) == 24:
+			self.newKey = self.newKey[:16]
+		if len(self.newKey) > 32:
+			self.newKey = self.newKey[:32]
 		while True:
 			if self.isDead == True:
 				break
 			data, address = self.s.recvfrom(1024)
+			if len(data) < 16:
+				for i in range(4):
+					data += data
 			IV = data[:AES.block_size]
 			encMsg = data[AES.block_size:]
-			decrypter = AES.new(self.key, AES.MODE_CFB, IV)
+			decrypter = AES.new(self.newKey, AES.MODE_CFB, IV)
 			raw = decrypter.decrypt(encMsg)
-			print(str(address)+": " + raw.decode('utf-8'))
+			try:
+				print(str(address)+": " + raw.decode('utf-8'))
+			except:
+				print(str(address)+": ERROR BAD DATA")
 	
 	def CASTDecryptLoop(self):
 		while True:
@@ -195,7 +213,6 @@ class netListener(threading.Thread):
 	
 	def kill(self):
 		self.isDead = True
-		
 
 if __name__ == '__main__':
 	main()
