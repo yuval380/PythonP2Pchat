@@ -22,7 +22,7 @@ def main():
 	
 	# socket creation
 	r = socket.socket()
-	r.connect(('8.8.8.8',53))
+	r.connect(('8.8.8.8',583))
 	hostIP, hostPort = r.getsockname()[0], arguments['port']
 	r.close()
 	hostAddress = (hostIP, hostPort)
