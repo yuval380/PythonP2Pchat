@@ -89,18 +89,20 @@ def AESELoop(target, s, key, me):
 	if len(key) > 32:
 		key = key[:32]
 	print("Type --kill to end transsmition")
-	message = input("---> ")
 	while True:
+		message = input("---> ")
 		if message == '--kill':
 			IV = Random.new().read(AES.block_size)
 			s.sendto(IV + AES.new(key, AES.MODE_CFB, IV).encrypt("Listener END".encode('utf-8')),me)
 			break
-		raw = message.encode('utf-8')
-		IV = Random.new().read(AES.block_size)
-		encrypter = AES.new(key, AES.MODE_CFB, IV)
-		encMsg = IV + encrypter.encrypt(raw)
-		s.sendto(encMsg, target)
-		message = input("---> ")
+		elif message == '--getMyAddress':
+			print("IP: {} Port {}".format(me[0],me[1]))
+		else:
+			raw = message.encode('utf-8')
+			IV = Random.new().read(AES.block_size)
+			encrypter = AES.new(key, AES.MODE_CFB, IV)
+			encMsg = IV + encrypter.encrypt(raw)
+			s.sendto(encMsg, target)
 	
 def CASTELoop(target, s, key):
 	print("Type --kill to end transsmition")
@@ -179,7 +181,7 @@ class netListener(threading.Thread):
 		if len(self.newKey) < 8:
 			for i in range(3):
 				self.newKey += self.newKey
-		if len(self.newKey) == 24:
+		if len(self.newKey) > 8 and len(self.newKey) < 32:
 			self.newKey = self.newKey[:16]
 		if len(self.newKey) > 32:
 			self.newKey = self.newKey[:32]
@@ -192,11 +194,13 @@ class netListener(threading.Thread):
 			if len(data) < 16:
 				for i in range(4):
 					data += data
+			# packet deformating
 			IV = data[:AES.block_size]
 			encMsg = data[AES.block_size:]
+			# decryption
 			decrypter = AES.new(self.newKey, AES.MODE_CFB, IV)
 			raw = decrypter.decrypt(encMsg)
-			try:
+			try: # validality test
 				print(str(address)+": " + raw.decode('utf-8'))
 			except:
 				print(str(address)+": ERROR BAD DATA")
@@ -229,3 +233,4 @@ class netListener(threading.Thread):
 
 if __name__ == '__main__':
 	main()
+	s.close()
