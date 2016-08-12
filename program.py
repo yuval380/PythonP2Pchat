@@ -175,6 +175,7 @@ class netListener(threading.Thread):
 	
 	
 	def AESDecryptLoop(self):
+		# key length optamisation
 		if len(self.newKey) < 8:
 			for i in range(3):
 				self.newKey += self.newKey
@@ -182,10 +183,12 @@ class netListener(threading.Thread):
 			self.newKey = self.newKey[:16]
 		if len(self.newKey) > 32:
 			self.newKey = self.newKey[:32]
+		# Listener Loop
 		while True:
 			if self.isDead == True:
 				break
 			data, address = self.s.recvfrom(1024)
+			# data length optamisation
 			if len(data) < 16:
 				for i in range(4):
 					data += data
